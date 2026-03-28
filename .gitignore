@@ -1,0 +1,49 @@
+# Dépendances
+/vendor/
+
+# Base de données SQLite
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+
+# Cache Doctrine
+/var/cache/
+/cache/
+/tmp/
+
+# Proxies générés par Doctrine
+/src/Proxies/
+/proxies/
+
+# Configuration locale / sensible
+.env
+.env.local
+*.local.php
+config/local.php
+
+# Logs
+/var/log/
+/logs/
+*.log
+
+# IDEs & éditeurs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# PHPUnit
+/phpunit.xml
+.phpunit.result.cache
+/coverage/
+
+# PHP CS Fixer
+.php-cs-fixer.cache
+.php_cs.cache
+
+config.php
+!config.example.php
