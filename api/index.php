@@ -51,15 +51,6 @@ function apiSecret(): string
     return (is_string($s) && $s !== '') ? $s : 'change_this_secret_in_env';
 }
 
-function isLocalRequest(): bool
-{
-    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
-    $host = preg_replace('/:\\d+$/', '', $host);
-    $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-    return in_array($host, ['localhost', '127.0.0.1', '::1'], true)
-        || in_array($remote, ['127.0.0.1', '::1'], true);
-}
-
 function makeToken(Users $u): string
 {
     $h = b64e((string) json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
@@ -150,7 +141,7 @@ if ($resource === '')
     out(200, ['endpoints' => ['GET /api/index.php/users', 'GET /api/index.php/reservations',
         'POST /api/index.php/auth']]);
 
-if (!in_array($resource, ['auth', 'users', 'reservations', 'send-email'], true))
+if (!in_array($resource, ['auth', 'users', 'reservations'], true))
     out(404, ['error' => 'Ressource inconnue.']);
 
 
@@ -364,117 +355,6 @@ if ($resource === 'reservations') {
     }
 
     out(405, ['error' => 'Méthode non autorisée.']);
-}
-
-// send-email
-
-if ($resource === 'send-email') {
-    if ($method !== 'POST') {
-        out(405, ['error' => 'Méthode non autorisée.']);
-    }
-
-    $data = input();
-    
-    // Validation des données requises
-    $requiredFields = ['email', 'type', 'reservation_id', 'date', 'time', 'price'];
-    foreach ($requiredFields as $field) {
-        if (!array_key_exists($field, $data) || $data[$field] === '') {
-            out(422, ['error' => "Champ $field requis."]);
-        }
-    }
-
-    $recipientEmail = strtolower(trim((string) $data['email']));
-    if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
-        out(422, ['error' => 'email invalide.']);
-    }
-
-    $emailType = trim((string) $data['type']);
-    $reservationId = trim((string) $data['reservation_id']);
-    $date = trim((string) $data['date']);
-    $time = trim((string) $data['time']);
-    $price = trim((string) $data['price']);
-
-    // Construction de l'email
-    if ($emailType === 'reservation_confirmation') {
-        $subject = 'Confirmation de votre réservation - Kheti';
-        
-        $dateObj = DateTime::createFromFormat('Y-m-d', $date);
-        $dateFormatted = $dateObj ? $dateObj->format('d/m/Y') : $date;
-        
-        $body = "
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset=\"UTF-8\">
-    <style>
-        body { font-family: Arial, sans-serif; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
-        .header { background: #B69F5E; color: white; padding: 20px; text-align: center; }
-        .content { background: white; padding: 20px; margin-top: 20px; }
-        .detail { margin: 10px 0; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class=\"container\">
-        <div class=\"header\">
-            <h1>Kheti - Réservation Confirmée</h1>
-        </div>
-        <div class=\"content\">
-            <p>Bonjour,</p>
-            <p>Votre réservation a été confirmée avec succès ! Voici les détails de votre visite :</p>
-            
-            <div class=\"detail\">
-                <strong>Numéro de réservation :</strong> #" . htmlspecialchars($reservationId) . "
-            </div>
-            <div class=\"detail\">
-                <strong>Date :</strong> " . htmlspecialchars($dateFormatted) . "
-            </div>
-            <div class=\"detail\">
-                <strong>Heure :</strong> " . htmlspecialchars($time) . "
-            </div>
-            <div class=\"detail\">
-                <strong>Montant :</strong> " . htmlspecialchars($price) . " €
-            </div>
-            
-            <p>Merci de votre réservation. À bientôt dans les mystères de l'Égypte !</p>
-            
-            <div class=\"footer\">
-                <p>Cet email a été envoyé automatiquement. Veuillez ne pas répondre directement à ce message.</p>
-                <p>Pour toute question, contactez-nous via notre site : www.kheti.com</p>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-        ";
-    } else {
-        out(422, ['error' => 'Type d\'email non supporté.']);
-    }
-
-    // Préparation des headers
-    $senderEmail = 'faravision.agency@gmail.com';
-    $headers = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: " . $senderEmail . "\r\n";
-    $headers .= "X-Mailer: Kheti Reservation System\r\n";
-
-    // Tentative d'envoi
-    $mailSent = @mail($recipientEmail, $subject, $body, $headers);
-
-    if ($mailSent) {
-        out(200, ['success' => true, 'message' => 'Email envoyé avec succès.']);
-    }
-
-    if (isLocalRequest()) {
-        out(202, [
-            'success' => true,
-            'message' => 'Envoi d\'email non disponible en local (WAMP sans SMTP).',
-            'simulated' => true,
-        ]);
-    }
-
-    out(500, ['error' => 'L\'email n\'a pas pu être envoyé. Contactez l\'administrateur.']);
 }
 
 out(405, ['error' => 'Méthode non autorisée.']);
